@@ -1,4 +1,5 @@
 class AssignmentService {
+
     // 프로그램의 전체 흐름만 담당합니다.
     int lastWeek;
     InputReader inputReader;
@@ -8,7 +9,13 @@ class AssignmentService {
     AssignmentProgressManager progressManager;
 
     // 프로그램 실행에 필요한 입력, 출력, 계산 담당 객체를 연결합니다.
-    AssignmentService(InputReader inputReader, AssignmentInputHandler inputHandler, AssignmentView view, GreedyAssignmentScheduler greedyAssignmentScheduler, AssignmentProgressManager progressManager) {
+    AssignmentService(
+        InputReader inputReader,
+        AssignmentInputHandler inputHandler,
+        AssignmentView view,
+        GreedyAssignmentScheduler greedyAssignmentScheduler,
+        AssignmentProgressManager progressManager
+    ) {
         lastWeek = 16;
         this.inputReader = inputReader;
         this.inputHandler = inputHandler;
@@ -46,9 +53,9 @@ class AssignmentService {
         System.out.println();
         System.out.println("        *       .        *        .       *");
         System.out.println("   .        *        .        *        .");
-        System.out.println("       _/\\_                         _/\\_");
+        System.out.println("     _/\\_                             _/\\_");
         System.out.println("    <(o )___   한 학기 과제 완료   ___( o)>");
-        System.out.println("     ( ._> /      수고했습니다!      \\ <_. )");
+        System.out.println("     ( ._> /      수고했습니다!    \\ <_. )");
         System.out.println("      `---'                         `---'");
         System.out.println();
         System.out.println("KkwakJAVA가 과제 관리를 마무리합니다.");
@@ -89,7 +96,10 @@ class AssignmentService {
     }
 
     // 입력 중단 상황에서 수정, 입력 종료, 추가 입력 메뉴를 처리합니다.
-    boolean handleInputMenu(AssignmentList assignmentList, boolean canContinueInput) {
+    boolean handleInputMenu(
+        AssignmentList assignmentList,
+        boolean canContinueInput
+    ) {
         view.printInputMenu(canContinueInput);
         int maxMenu = 2;
 
@@ -121,7 +131,17 @@ class AssignmentService {
             return false;
         }
 
-        Assignment assignment = inputHandler.readAssignment(assignmentList.getCount() + 1, title);
+        if (assignmentList.hasSameTitle(title)) {
+            System.out.println(
+                "이미 등록된 과목명입니다. 다른 과목명을 입력해주세요."
+            );
+            return false;
+        }
+
+        Assignment assignment = inputHandler.readAssignment(
+            assignmentList.getCount() + 1,
+            title
+        );
         if (assignment == null) {
             return false;
         }
@@ -138,7 +158,11 @@ class AssignmentService {
             return;
         }
 
-        int number = inputReader.readIntInRange("수정할 중요도 순위: ", 1, assignmentList.getCount());
+        int number = inputReader.readIntInRange(
+            "수정할 중요도 순위: ",
+            1,
+            assignmentList.getCount()
+        );
 
         int index = assignmentList.findIndexByImportance(number);
         Assignment oldAssignment = assignmentList.get(index);
@@ -147,7 +171,9 @@ class AssignmentService {
         assignmentList.pullForwardLowerImportance(oldImportance);
 
         System.out.println();
-        System.out.println("중요도 " + number + "순위 항목을 새 내용으로 다시 입력합니다.");
+        System.out.println(
+            "중요도 " + number + "순위 항목을 새 내용으로 다시 입력합니다."
+        );
         String title = inputHandler.readSubjectTitle();
         boolean edited = addAssignment(assignmentList, title);
 
@@ -162,10 +188,16 @@ class AssignmentService {
     boolean processCompletion(AssignmentList assignmentList, int week) {
         // 완료되지 않은 과목이 남아 있는 동안 그리디 우선순위를 계속 다시 계산합니다.
         while (!progressManager.isAllCompleted(assignmentList)) {
-            GreedyScheduleItem[] schedule = greedyAssignmentScheduler.schedule(assignmentList);
+            GreedyScheduleItem[] schedule = greedyAssignmentScheduler.schedule(
+                assignmentList
+            );
             view.printSchedule(week, schedule);
 
-            String command = inputReader.readLine("완료한 과목명 또는 '계획대로 했음' 입력(exit 종료): ").trim();
+            String command = inputReader
+                .readLine(
+                    "완료한 과목명 또는 '계획대로 했음' 입력(exit 종료): "
+                )
+                .trim();
 
             if (isExitCommand(command)) {
                 System.out.println("프로그램을 종료합니다.");
@@ -185,7 +217,9 @@ class AssignmentService {
     // "계획대로 했음" 입력 시 현재 1순위 과제를 완료 처리합니다.
     void completeByPlan(GreedyScheduleItem[] schedule) {
         if (progressManager.markCompletedByPlan(schedule)) {
-            System.out.println(schedule[0].assignment.title + " 과목을 완료 처리했습니다.");
+            System.out.println(
+                schedule[0].assignment.title + " 과목을 완료 처리했습니다."
+            );
         } else {
             System.out.println("완료 처리할 과목이 없습니다.");
         }

@@ -61,6 +61,17 @@ class AssignmentList {
         return assignments[findIndexByImportance(importance)];
     }
 
+    // 같은 과목명이 이미 등록되어 있는지 확인합니다.
+    boolean hasSameTitle(String title) {
+        for (int i = 0; i < count; i++) {
+            if (assignments[i].title.equals(title)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     // 새 과목의 중요도와 같거나 낮은 기존 과목들을 한 칸씩 뒤로 밉니다.
     void pushBackSameOrLowerImportance(int newImportance) {
         for (int i = 0; i < count; i++) {
