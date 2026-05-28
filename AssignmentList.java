@@ -24,6 +24,19 @@ class AssignmentList {
         return count;
     }
 
+    // 기한이 지나지 않은 과제 개수를 돌려줍니다.
+    int getActiveCount() {
+        int activeCount = 0;
+
+        for (int i = 0; i < count; i++) {
+            if (assignments[i].importance > 0 && !assignments[i].isOverdue()) {
+                activeCount++;
+            }
+        }
+
+        return activeCount;
+    }
+
     // 배열의 index 위치에 있는 과제를 돌려줍니다.
     Assignment get(int index) {
         return assignments[index];
@@ -54,11 +67,6 @@ class AssignmentList {
         }
 
         return 0;
-    }
-
-    // 중요도 순위를 기준으로 과제 객체를 찾습니다.
-    Assignment findByImportance(int importance) {
-        return assignments[findIndexByImportance(importance)];
     }
 
     // 같은 과목명이 이미 등록되어 있는지 확인합니다.

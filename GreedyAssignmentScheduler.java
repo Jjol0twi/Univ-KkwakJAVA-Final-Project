@@ -28,7 +28,7 @@ class GreedyAssignmentScheduler {
         int incompleteCount = 0;
 
         for (int i = 0; i < assignmentList.getCount(); i++) {
-            if (!assignmentList.get(i).completed) {
+            if (!assignmentList.get(i).completed && !assignmentList.get(i).isOverdue()) {
                 incompleteCount++;
             }
         }
@@ -44,7 +44,7 @@ class GreedyAssignmentScheduler {
         for (int i = 0; i < assignmentList.getCount(); i++) {
             Assignment assignment = assignmentList.get(i);
 
-            if (!selected[i] && !assignment.completed) {
+            if (!selected[i] && !assignment.completed && !assignment.isOverdue()) {
                 GreedyScheduleItem item = makeScheduleItem(assignment);
 
                 if (bestIndex == -1 || isBetter(item, bestItem)) {
@@ -124,8 +124,4 @@ class GreedyAssignmentScheduler {
         return assignment.submitAssignmentCount * 5;
     }
 
-    // 필요한 시간이 많을수록 작업량 점수가 높아지도록 계산합니다.
-    int getWorkloadScore(int requiredMinutes) {
-        return requiredMinutes / 30;
-    }
 }

@@ -8,6 +8,7 @@ class Assignment {
     int remainingDays;
     String memo;
     int importance;
+    int displayRank;
     boolean completed;
 
     // 입력받은 과제 정보를 하나의 객체로 묶어서 저장합니다.
@@ -20,6 +21,7 @@ class Assignment {
         this.remainingDays = remainingDays;
         this.memo = memo;
         this.importance = importance;
+        displayRank = 0;
         completed = false;
     }
 
@@ -34,10 +36,17 @@ class Assignment {
 
     // 완료 여부를 출력용 상태 문구로 바꿉니다.
     String getStatusText() {
-        if (completed) {
+        if (isOverdue()) {
+            return "기한지남";
+        } else if (completed) {
             return "완료";
         }
 
         return "진행중";
+    }
+
+    // 제출 기한이 이미 지났는지 확인합니다.
+    boolean isOverdue() {
+        return remainingDays < 0;
     }
 }

@@ -1,3 +1,5 @@
+import java.time.LocalDate;
+
 class AssignmentService {
 
     // 프로그램의 전체 흐름만 담당합니다.
@@ -7,6 +9,8 @@ class AssignmentService {
     AssignmentView view;
     GreedyAssignmentScheduler greedyAssignmentScheduler;
     AssignmentProgressManager progressManager;
+    DeadlineCalculator deadlineCalculator;
+    LocalDate lastAdjustedDate;
 
     // 프로그램 실행에 필요한 입력, 출력, 계산 담당 객체를 연결합니다.
     AssignmentService(
@@ -14,7 +18,8 @@ class AssignmentService {
         AssignmentInputHandler inputHandler,
         AssignmentView view,
         GreedyAssignmentScheduler greedyAssignmentScheduler,
-        AssignmentProgressManager progressManager
+        AssignmentProgressManager progressManager,
+        DeadlineCalculator deadlineCalculator
     ) {
         lastWeek = 16;
         this.inputReader = inputReader;
@@ -22,6 +27,8 @@ class AssignmentService {
         this.view = view;
         this.greedyAssignmentScheduler = greedyAssignmentScheduler;
         this.progressManager = progressManager;
+        this.deadlineCalculator = deadlineCalculator;
+        lastAdjustedDate = null;
     }
 
     // 처음 주차를 정하고, 한 주차가 끝날 때마다 다음 주차를 실행합니다.
@@ -100,25 +107,43 @@ class AssignmentService {
         AssignmentList assignmentList,
         boolean canContinueInput
     ) {
-        view.printInputMenu(canContinueInput);
-        int maxMenu = 2;
+        boolean selected = false;
 
-        if (canContinueInput) {
-            maxMenu = 3;
-        }
+        while (!selected) {
+            view.printInputMenu(canContinueInput);
+            String menu = inputReader.readLine("메뉴 입력: ").trim();
 
-        int menu = inputReader.readIntInRange("번호 선택: ", 1, maxMenu);
+            switch (menu) {
+                case "1":
+                case "수정":
+                    editAssignment(assignmentList);
+                    selected = true;
+                    break;
+                case "2":
+                case "입력 종료":
+                case "입력종료":
+                case "종료":
+                    System.out.println("입력을 종료하고 우선순위를 정리합니다.");
+                    return true;
+                case "3":
+                case "추가 입력":
+                case "추가입력":
+                case "추가":
+                    if (canContinueInput) {
+                        System.out.println("과목 입력을 계속합니다.");
+                        selected = true;
+                    } else {
+                        System.out.println("지금은 추가 입력 메뉴를 사용할 수 없습니다.");
+                    }
+                    break;
+                default:
+                    System.out.println("1 또는 수정, 2 또는 입력 종료 중 하나를 입력해주세요.");
 
-        switch (menu) {
-            case 1:
-                editAssignment(assignmentList);
-                break;
-            case 2:
-                System.out.println("입력을 종료하고 우선순위를 정리합니다.");
-                return true;
-            case 3:
-                System.out.println("과목 입력을 계속합니다.");
-                break;
+                    if (canContinueInput) {
+                        System.out.println("3 또는 추가 입력도 사용할 수 있습니다.");
+                    }
+                    break;
+            }
         }
 
         return false;
@@ -139,7 +164,7 @@ class AssignmentService {
         }
 
         Assignment assignment = inputHandler.readAssignment(
-            assignmentList.getCount() + 1,
+            assignmentList.getActiveCount() + 1,
             title
         );
         if (assignment == null) {
@@ -158,10 +183,17 @@ class AssignmentService {
             return;
         }
 
+        int activeCount = assignmentList.getActiveCount();
+
+        if (activeCount == 0) {
+            System.out.println("수정할 과목이 없습니다.");
+            return;
+        }
+
         int number = inputReader.readIntInRange(
             "수정할 중요도 순위: ",
             1,
-            assignmentList.getCount()
+            activeCount
         );
 
         int index = assignmentList.findIndexByImportance(number);
@@ -186,51 +218,164 @@ class AssignmentService {
 
     // 그리디 순서를 보여주고 사용자의 완료 입력을 처리합니다.
     boolean processCompletion(AssignmentList assignmentList, int week) {
-        // 완료되지 않은 과목이 남아 있는 동안 그리디 우선순위를 계속 다시 계산합니다.
+        refreshRemainingDays(assignmentList);
+        updatePriorityRanks(assignmentList);
+        progressManager.resetHistory();
+
+        // 완료되지 않은 과목이 남아 있는 동안 현재 순위를 유지하며 완료 입력을 받습니다.
         while (!progressManager.isAllCompleted(assignmentList)) {
-            GreedyScheduleItem[] schedule = greedyAssignmentScheduler.schedule(
-                assignmentList
-            );
-            view.printSchedule(week, schedule);
+            if (refreshRemainingDaysIfDateChanged(assignmentList)) {
+                updatePriorityRanks(assignmentList);
+            }
+
+            view.printPriorityTable(week, assignmentList);
+            view.printCompletionMenu(progressManager.hasCompletionHistory());
 
             String command = inputReader
                 .readLine(
-                    "완료한 과목명 또는 '계획대로 했음' 입력(exit 종료): "
+                    "완료 입력: "
                 )
                 .trim();
 
-            if (isExitCommand(command)) {
+            if (isCompletionExitCommand(command)) {
                 System.out.println("프로그램을 종료합니다.");
                 return false;
+            } else if (command.equals("")) {
+                completeNextAssignment(assignmentList);
+            } else if (isUndoCommand(command) && progressManager.hasCompletionHistory()) {
+                undoLastCompletion();
+            } else if (command.equals("되돌리기")) {
+                System.out.println("되돌릴 완료 기록이 없습니다.");
+            } else if (isRecalculateCommand(command)) {
+                refreshRemainingDays(assignmentList);
+                updatePriorityRanks(assignmentList);
+                System.out.println("우선순위를 다시 계산합니다.");
             } else if (isPlanDoneCommand(command)) {
-                completeByPlan(schedule);
+                completeNextAssignment(assignmentList);
+            } else if (completeByScheduleOrder(assignmentList, command)) {
+                // 순위 번호로 완료 처리된 경우입니다.
             } else {
                 completeByTitle(assignmentList, command);
             }
         }
 
+        view.printPriorityTable(week, assignmentList);
         System.out.println();
         System.out.println(week + "주차 과제가 모두 완료되었습니다.");
         return true;
     }
 
-    // "계획대로 했음" 입력 시 현재 1순위 과제를 완료 처리합니다.
-    void completeByPlan(GreedyScheduleItem[] schedule) {
-        if (progressManager.markCompletedByPlan(schedule)) {
+    // 프로그램 실행 중 날짜가 바뀌면 남은 기한을 자동으로 다시 계산합니다.
+    boolean refreshRemainingDaysIfDateChanged(AssignmentList assignmentList) {
+        LocalDate today = LocalDate.now();
+
+        if (lastAdjustedDate == null) {
+            refreshRemainingDays(assignmentList);
+            return true;
+        } else if (!lastAdjustedDate.equals(today)) {
+            refreshRemainingDays(assignmentList);
+            System.out.println("날짜가 바뀌어 남은 기한을 다시 계산했습니다.");
+            return true;
+        }
+
+        return false;
+    }
+
+    // 제출 기한 날짜를 기준으로 모든 과제의 남은 기한을 다시 계산합니다.
+    void refreshRemainingDays(AssignmentList assignmentList) {
+        for (int i = 0; i < assignmentList.getCount(); i++) {
+            Assignment assignment = assignmentList.get(i);
+            assignment.remainingDays = deadlineCalculator.calculateRemainingDays(
+                assignment.deadlineText
+            );
+
+            if (assignment.isOverdue()) {
+                assignment.completed = true;
+                assignment.displayRank = 0;
+
+                if (assignment.importance > 0) {
+                    assignmentList.pullForwardLowerImportance(assignment.importance);
+                    assignment.importance = 0;
+                }
+            }
+        }
+
+        lastAdjustedDate = LocalDate.now();
+    }
+
+    // 그리디 기준으로 순위를 다시 계산해 진행중인 과제에 저장합니다.
+    void updatePriorityRanks(AssignmentList assignmentList) {
+        GreedyScheduleItem[] schedule = greedyAssignmentScheduler.schedule(
+            assignmentList
+        );
+
+        for (int i = 0; i < schedule.length; i++) {
+            schedule[i].assignment.displayRank = i + 1;
+        }
+    }
+
+    // Enter 또는 "계획대로 했음" 입력 시 현재 표의 가장 위 과제를 완료 처리합니다.
+    void completeNextAssignment(AssignmentList assignmentList) {
+        printCompletionResult(
+            progressManager.markNextCompleted(assignmentList)
+        );
+    }
+
+    // 표의 순위 번호를 입력했는지 확인하고, 맞으면 해당 과목을 완료 처리합니다.
+    boolean completeByScheduleOrder(AssignmentList assignmentList, String command) {
+        int order = getScheduleOrder(command);
+
+        if (order == -1) {
+            return false;
+        }
+
+        Assignment assignment = progressManager.markCompletedByDisplayRank(
+            assignmentList,
+            order
+        );
+
+        if (assignment != null) {
             System.out.println(
-                schedule[0].assignment.title + " 과목을 완료 처리했습니다."
+                assignment.title + " 과목을 완료 처리했습니다."
             );
         } else {
-            System.out.println("완료 처리할 과목이 없습니다.");
+            System.out.println("진행중인 과제의 순위를 입력해주세요.");
         }
+
+        return true;
     }
 
     // 사용자가 직접 입력한 과목명을 찾아 완료 처리합니다.
     void completeByTitle(AssignmentList assignmentList, String title) {
-        if (progressManager.markCompletedByTitle(assignmentList, title)) {
+        Assignment assignment = progressManager.markCompletedByTitle(
+            assignmentList,
+            title
+        );
+
+        if (assignment != null) {
             System.out.println(title + " 과목을 완료 처리했습니다.");
         } else {
             System.out.println("해당 과목을 찾지 못했습니다.");
+        }
+    }
+
+    // 가장 최근에 완료한 과제를 다시 진행중으로 되돌립니다.
+    void undoLastCompletion() {
+        Assignment assignment = progressManager.undoLastCompletion();
+
+        if (assignment != null) {
+            System.out.println(assignment.title + " 과목을 진행중으로 되돌렸습니다.");
+        } else {
+            System.out.println("되돌릴 완료 기록이 없습니다.");
+        }
+    }
+
+    // 완료 처리 결과를 공통 문구로 출력합니다.
+    void printCompletionResult(Assignment assignment) {
+        if (assignment != null) {
+            System.out.println(assignment.title + " 과목을 완료 처리했습니다.");
+        } else {
+            System.out.println("완료 처리할 과목이 없습니다.");
         }
     }
 
@@ -239,8 +384,43 @@ class AssignmentService {
         return command.equals("계획대로 했음") || command.equals("계획대로");
     }
 
+    // 재계산 명령어인지 확인합니다.
+    boolean isRecalculateCommand(String command) {
+        return command.equals("재계산")
+            || command.equals("재계산?")
+            || command.equals("재조정")
+            || command.equals("0");
+    }
+
+    // 완료 메뉴에서 직전 완료를 되돌리는 입력인지 확인합니다.
+    boolean isUndoCommand(String command) {
+        return command.equals("되돌리기") || command.equals("1");
+    }
+
+    // 완료 메뉴에서 프로그램 종료를 뜻하는 입력인지 확인합니다.
+    boolean isCompletionExitCommand(String command) {
+        return isExitCommand(command) || command.equals("종료") || command.equals("99");
+    }
+
     // exit 명령어인지 대소문자를 구분하지 않고 확인합니다.
     boolean isExitCommand(String title) {
         return title.equalsIgnoreCase("exit");
+    }
+
+    // "1", "1번", "1순위"처럼 순위를 뜻하는 입력에서 숫자를 뽑습니다.
+    int getScheduleOrder(String command) {
+        String orderText = command;
+
+        if (orderText.endsWith("순위")) {
+            orderText = orderText.substring(0, orderText.length() - 2).trim();
+        } else if (orderText.endsWith("번")) {
+            orderText = orderText.substring(0, orderText.length() - 1).trim();
+        }
+
+        if (orderText.equals("") || !inputReader.isOnlyDigits(orderText)) {
+            return -1;
+        }
+
+        return Integer.parseInt(orderText);
     }
 }

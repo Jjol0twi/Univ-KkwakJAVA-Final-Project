@@ -1,3 +1,5 @@
+import java.time.LocalDate;
+
 class AssignmentInputHandler {
     // 사용자 입력을 Assignment 객체로 바꾸는 클래스입니다.
     InputReader inputReader;
@@ -18,10 +20,6 @@ class AssignmentInputHandler {
         if (week > 0) {
             System.out.println(week + "주차로 시작합니다.");
             return week;
-        }
-
-        if (!startWeekText.equals("")) {
-            System.out.println("시작 주차를 인식하지 못해 직접 입력받습니다.");
         }
 
         return readWeek();
@@ -102,14 +100,31 @@ class AssignmentInputHandler {
 
     // 제출 기한 날짜를 입력받고, 날짜로 바꿀 수 있을 때까지 다시 묻습니다.
     String readDeadlineText() {
-        String deadlineText = inputReader.readLineOrCancel("제출 기한 날짜(예: 5월 30일, 5/30, 2026-05-30): ");
+        String deadlineText = inputReader.readLineOrCancel(getDeadlineInputMessage());
 
         while (deadlineText != null && !deadlineCalculator.isValidDeadline(deadlineText)) {
-            System.out.println("날짜를 다시 입력해주세요. 예: 5월 30일, 5/30, 2026-05-30");
-            deadlineText = inputReader.readLineOrCancel("제출 기한 날짜: ");
+            System.out.println("날짜를 다시 입력해주세요. " + getDeadlineExampleText());
+            deadlineText = inputReader.readLineOrCancel(getDeadlineInputMessage());
         }
 
         return deadlineText;
+    }
+
+    // 오늘 날짜를 기준으로 제출 기한 입력 예시 문구를 만듭니다.
+    String getDeadlineInputMessage() {
+        return "제출 기한 날짜(" + getDeadlineExampleText() + "): ";
+    }
+
+    // 오늘 날짜를 예시로 보여줍니다.
+    String getDeadlineExampleText() {
+        LocalDate exampleDate = LocalDate.now();
+
+        return "예: "
+            + exampleDate.getMonthValue() + "월 "
+            + exampleDate.getDayOfMonth() + "일, "
+            + exampleDate.getMonthValue() + "/"
+            + exampleDate.getDayOfMonth() + ", "
+            + exampleDate;
     }
 
     // 현재 등록 가능한 범위 안에서 중요도 순위를 입력받습니다.

@@ -56,21 +56,6 @@ class InputReader {
         }
     }
 
-    // 범위가 있는 정수 입력 중 exit가 들어오면 현재 입력 취소를 뜻하는 -1을 돌려줍니다.
-    int readIntInRangeOrCancel(String message, int min, int max) {
-        while (true) {
-            int number = readIntOrCancel(message);
-
-            if (number == -1) {
-                return -1;
-            } else if (number >= min && number <= max) {
-                return number;
-            }
-
-            System.out.println(min + "부터 " + max + "까지 입력해주세요.");
-        }
-    }
-
     // 범위가 있는 정수 입력에서 빈 Enter는 기본값으로 처리하고, exit는 입력 취소로 처리합니다.
     int readIntInRangeOrDefaultOrCancel(String message, int min, int max, int defaultNumber) {
         while (true) {

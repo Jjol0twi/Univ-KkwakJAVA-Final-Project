@@ -23,8 +23,61 @@ class AssignmentView {
         printTableHeader();
 
         for (int importance = 1; importance <= assignmentList.getCount(); importance++) {
-            Assignment assignment = assignmentList.findByImportance(importance);
-            printTableRow(importance, assignment);
+            for (int i = 0; i < assignmentList.getCount(); i++) {
+                Assignment assignment = assignmentList.get(i);
+
+                if (assignment.importance == importance && !assignment.completed && !assignment.isOverdue()) {
+                    printTableRow(assignment.importance, assignment);
+                }
+            }
+        }
+
+        printCompletedAssignments(assignmentList);
+    }
+
+    // 완료 처리 단계에서는 저장된 우선순위와 완료된 과제를 하나의 표로 출력합니다.
+    void printPriorityTable(int week, AssignmentList assignmentList) {
+        System.out.println();
+        System.out.println("[" + week + "주차 남은 과제 먼저 해야 할 순서]");
+
+        if (assignmentList.isEmpty()) {
+            System.out.println("입력된 과제가 없습니다.");
+            return;
+        }
+
+        printTableHeader();
+
+        for (int rank = 1; rank <= assignmentList.getCount(); rank++) {
+            for (int i = 0; i < assignmentList.getCount(); i++) {
+                Assignment assignment = assignmentList.get(i);
+
+                if (!assignment.completed && !assignment.isOverdue() && assignment.displayRank == rank) {
+                    printTableRow(assignment.displayRank, assignment);
+                }
+            }
+        }
+
+        printCompletedAssignments(assignmentList);
+    }
+
+    // 완료되었거나 기한이 지난 과제는 표 아래쪽에 모아서 출력합니다.
+    void printCompletedAssignments(AssignmentList assignmentList) {
+        for (int importance = 1; importance <= assignmentList.getCount(); importance++) {
+            for (int i = 0; i < assignmentList.getCount(); i++) {
+                Assignment assignment = assignmentList.get(i);
+
+                if (assignment.completed && !assignment.isOverdue() && assignment.displayRank == importance) {
+                    printTableRow(assignment.displayRank, assignment);
+                }
+            }
+        }
+
+        for (int i = 0; i < assignmentList.getCount(); i++) {
+            Assignment assignment = assignmentList.get(i);
+
+            if (assignment.isOverdue()) {
+                printTableRow(0, assignment);
+            }
         }
     }
 
@@ -44,21 +97,6 @@ class AssignmentView {
         }
     }
 
-    // 그리디 알고리즘으로 정리된 과제 수행 순서를 출력합니다.
-    void printSchedule(int week, GreedyScheduleItem[] schedule) {
-        System.out.println();
-        System.out.println("[" + week + "주차 남은 과제 먼저 해야 할 순서]");
-
-        if (schedule.length == 0) {
-            System.out.println("남은 과제가 없습니다.");
-            return;
-        }
-
-        for (int i = 0; i < schedule.length; i++) {
-            schedule[i].printOrder(i + 1);
-        }
-    }
-
     // 과제 목록 표의 제목 줄과 구분선을 출력합니다.
     void printTableHeader() {
         System.out.println(formatTableRow("순위", "과목명", "강의", "제출", "퀴즈", "남은기한", "상태", "메모"));
@@ -67,7 +105,7 @@ class AssignmentView {
 
     // 과제 하나를 표의 한 줄로 출력합니다.
     void printTableRow(int importance, Assignment assignment) {
-        System.out.println(formatTableRow(
+        String row = formatTableRow(
                 String.valueOf(importance),
                 assignment.title,
                 assignment.onlineLectureCount + "개",
@@ -75,7 +113,9 @@ class AssignmentView {
                 assignment.quizAssignmentCount + "개",
                 assignment.remainingDays + "일",
                 assignment.getStatusText(),
-                assignment.getMemoText()));
+                assignment.getMemoText());
+
+        System.out.println(addLineThrough(row, assignment.completed || assignment.isOverdue()));
     }
 
     // 표의 각 칸 너비를 맞춰 한 줄 문자열을 만듭니다.
@@ -88,6 +128,21 @@ class AssignmentView {
                 + padLeft(remainingDays, 8) + "  "
                 + padRight(status, 8) + "  "
                 + memo;
+    }
+
+    // 완료 처리 단계에서 사용할 한국어 명령 메뉴를 출력합니다.
+    void printCompletionMenu(boolean canUndo) {
+        System.out.println();
+        System.out.println("[완료 메뉴]");
+        System.out.println("Enter. 다음 과제 완료");
+
+        if (canUndo) {
+            System.out.println("1. 되돌리기");
+        }
+
+        System.out.println("과목명 또는 1번처럼 순위를 입력해도 완료할 수 있습니다.");
+        System.out.println("0. 재조정");
+        System.out.println("99. 종료");
     }
 
     // 문자열을 오른쪽에 공백을 붙여 지정한 화면 너비에 맞춥니다.
@@ -135,6 +190,15 @@ class AssignmentView {
         }
 
         return result + "...";
+    }
+
+    // 완료된 과목 행에는 터미널 취소선을 적용합니다.
+    String addLineThrough(String text, boolean completed) {
+        if (completed) {
+            return "\u001B[9m" + text + "\u001B[0m";
+        }
+
+        return text;
     }
 
     // 한글은 보통 터미널에서 2칸을 차지하므로 화면 표시 너비를 따로 계산합니다.

@@ -15,7 +15,7 @@ public class KkwakJAVA {
         AssignmentProgressManager progressManager = new AssignmentProgressManager();
         AssignmentInputHandler inputHandler = new AssignmentInputHandler(inputReader, textNumberParser, deadlineCalculator);
         AssignmentView assignmentView = new AssignmentView();
-        AssignmentService assignmentService = new AssignmentService(inputReader, inputHandler, assignmentView, greedyAssignmentScheduler, progressManager);
+        AssignmentService assignmentService = new AssignmentService(inputReader, inputHandler, assignmentView, greedyAssignmentScheduler, progressManager, deadlineCalculator);
 
         System.out.println("KkwakJAVA를 시작합니다.");
         assignmentService.run(startWeekText);
