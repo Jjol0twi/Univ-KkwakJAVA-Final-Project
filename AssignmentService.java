@@ -38,6 +38,12 @@ class AssignmentService {
         int week = inputHandler.readWeek(startWeekText);
         boolean running = true;
 
+        if (week > lastWeek) {
+            System.out.println(lastWeek + "주차가 마지막 주차입니다.");
+            printLastWeekEvent();
+            return;
+        }
+
         // 한 주차가 모두 완료되면 다음 주차로 넘어갑니다.
         while (running) {
             running = runWeek(week);

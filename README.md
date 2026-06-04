@@ -42,9 +42,9 @@ java KkwakJAVA 11주차
 - 과목명 외 입력 위치에서 `exit` 입력 시 현재 과제 등록 취소
 - 남은 과제 우선순위를 과제 목록 표 안에서 정리
 - 완료된 과목은 현재 과제 목록에서 취소선으로 표시
-- 추천 표의 순위 번호 또는 과목명으로 완료 처리
+- Enter, 표의 순위 번호, 과목명으로 완료 처리
 - `0` 또는 `재조정` 입력 시 현재 목록 기준으로 우선순위 다시 계산
-- `계획대로 했음` 입력 시 현재 1순위 과제 완료 처리
+- `1` 또는 `되돌리기` 입력 시 직전 완료 취소
 - 모든 과제를 완료하면 다음 주차로 자동 이동
 - 16주차까지 완료하면 축하 메시지 출력 후 종료
 
@@ -104,18 +104,32 @@ java KkwakJAVA 11주차
 | 클래스 | 역할 |
 | --- | --- |
 | `KkwakJAVA` | 프로그램 시작점 |
-| `Assignment` | 과목 하나의 과제 정보 저장 |
+| `Assignment` | 과목 하나의 과제 정보, 완료 상태, 화면 순위 저장 |
 | `AssignmentList` | 과제 배열과 중요도 순위 관리 |
 | `AssignmentInputHandler` | 사용자 입력을 과제 객체로 변환 |
 | `InputReader` | Scanner 입력 처리 |
 | `AssignmentView` | 표, 메뉴, 결과 출력 |
-| `AssignmentService` | 전체 프로그램 흐름 제어 |
-| `AssignmentProgressManager` | 완료 처리 관리 |
+| `AssignmentService` | 입력, 계산, 출력, 완료 처리 흐름 조율 |
+| `AssignmentProgressManager` | 완료 처리, 되돌리기, 전체 완료 여부 관리 |
 | `DeadlineCalculator` | 제출 기한과 남은 기간 계산 |
 | `TextNumberParser` | 문자열에서 숫자 추출 |
 | `StudyTimeCalculator` | 필요한 시간과 가능한 시간 계산 |
 | `GreedyAssignmentScheduler` | 그리디 기준으로 과제 순서 계산 |
 | `GreedyScheduleItem` | 그리디 결과 출력 항목 |
+
+## 구조와 패턴
+
+이 프로그램은 MVC와 Service 구조를 참고해 역할을 나누었습니다.
+
+- `KkwakJAVA`는 프로그램 시작점으로, 필요한 객체를 생성하고 서로 연결합니다.
+- `AssignmentService`는 전체 실행 흐름을 조율하는 Service 역할을 합니다.
+- `AssignmentInputHandler`와 `InputReader`는 사용자 입력을 담당합니다.
+- `AssignmentView`는 표와 메뉴 출력만 담당합니다.
+- `GreedyAssignmentScheduler`는 우선순위 계산 알고리즘을 담당합니다.
+- `AssignmentProgressManager`는 완료, 되돌리기, 전체 완료 여부를 관리합니다.
+- `Assignment`, `AssignmentList`는 과제 데이터와 목록을 관리합니다.
+
+객체를 `KkwakJAVA`에서 생성한 뒤 생성자로 넘겨 연결하므로, 간단한 의존성 주입 방식도 사용했습니다. 덕분에 입력, 출력, 계산, 상태 관리 로직이 한 클래스에 몰리지 않도록 구성했습니다.
 
 ## 실행 흐름
 
@@ -194,3 +208,5 @@ KkwakJAVA가 과제 관리를 마무리합니다.
 이 프로그램은 대학생의 과제 관리를 돕기 위한 터미널 기반 Java 프로그램입니다. 입력된 과제를 단순히 나열하는 것이 아니라, 마감 위험과 중요도, 작업량을 기준으로 지금 먼저 해야 할 과제를 추천합니다.
 
 전체 경우의 수를 모두 계산하지 않고 매 단계에서 가장 우선순위가 높은 과제를 선택하므로 그리디 알고리즘 방식으로 볼 수 있습니다. 클래스는 입력, 출력, 데이터 저장, 시간 계산, 그리디 계산, 완료 처리, 전체 흐름 제어 역할로 나누었습니다.
+
+구조적으로는 `AssignmentService`가 각 기능 클래스를 조율하고, `GreedyAssignmentScheduler`가 우선순위를 계산하며, `AssignmentProgressManager`가 완료 상태를 관리합니다. 이처럼 역할을 분리해 코드 수정과 발표 설명이 쉽도록 구성했습니다.
